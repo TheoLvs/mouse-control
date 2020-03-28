@@ -3,6 +3,7 @@ import numpy as np
 import time
 import itertools
 from PIL import Image
+from pathlib import Path
 
 import win32gui
 import win32api
@@ -40,13 +41,27 @@ class MouseMoveListener:
         return capture
 
 
-    def listen(self,duration = 8*3600,pad = 10,max_stop = 1):
+    def _prepare_img(self,capture,resize = None):
+        img = Image.fromarray(np.uint8(capture.T*255))
+        if resize is not None:
+            assert len(resize) == 2
+            img = img.resize(resize)
+        return img
+
+
+
+    def listen(self,duration: int = 8*3600,pad: int = 10,max_stop: int = 1,save: str = None,resize: tuple = (100,100)):
 
         capture = self.start_capture()
         captures = []
         
         s = time.time()
         i = 1
+
+        # Save in folder if precised
+        if save is not None:
+            folder = Path(save)
+            folder.mkdir(exist_ok = True)
         
         # Prepare triggers
         old_record = False
@@ -94,8 +109,13 @@ class MouseMoveListener:
                     capture = self.start_capture()
 
                 elif (old_record,record) == (True,False):
-                    print("Stop recording")
+                    print("... Stop recording")
                     captures.append(capture)
+
+                    if save is not None:
+                        img = self._prepare_img(capture,resize)
+                        img_name = f"{int(time.time())}.png"
+                        img.save(folder / img_name)
             
             old_x,old_y = (x,y)
             old_record = record
